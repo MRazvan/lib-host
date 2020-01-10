@@ -1,10 +1,10 @@
 import { trim } from 'lodash';
-import { IConfig, IRootConfig } from './i.config';
+import { IConfig } from './i.config';
 
 export class ScopedConfig implements IConfig {
   private readonly _path: string;
 
-  constructor(path: string, private readonly _rootConfig: IRootConfig) {
+  constructor(path: string, private readonly _rootConfig: IConfig) {
     this._path = path;
   }
 
@@ -15,5 +15,9 @@ export class ScopedConfig implements IConfig {
 
   public value<T>(): T {
     return this.get<T>('');
+  }
+
+  public scope(path: string): IConfig {
+    return new ScopedConfig(path, this);
   }
 }

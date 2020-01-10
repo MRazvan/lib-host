@@ -1,12 +1,13 @@
+import { EventEmitter } from 'events';
 import { injectable } from 'inversify';
 import { defaultsDeep, get, isEmpty, isNil } from 'lodash';
 import { ILog } from '../log/interfaces/i.log';
 import { ScopedConfig } from './config.scoped';
-import { IConfig, IRootConfig } from './i.config';
+import { IConfig } from './i.config';
 import { NoopLogger } from './noop.logger';
 
 @injectable()
-export class RootConfig implements IRootConfig {
+export class RootConfig extends EventEmitter implements IConfig {
   private _data: any = {};
   private _log: ILog = new NoopLogger();
 
@@ -21,6 +22,7 @@ export class RootConfig implements IRootConfig {
   public setData(data: any): void {
     this._data = defaultsDeep(data, this._data);
     this._log.info('Configuration changed');
+    this.emit('changed', this);
   }
 
   public scope(path: string): IConfig {

@@ -1,9 +1,10 @@
+import { EventEmitter } from 'events';
 import { inject, injectable } from 'inversify';
 import { defaultsDeep } from 'lodash';
 import { RootConfig } from './config.root';
 
 @injectable()
-export class ConfigBuilder {
+export class ConfigBuilder extends EventEmitter {
   @inject(RootConfig)
   private readonly _rootConfig: RootConfig;
 
@@ -25,5 +26,6 @@ export class ConfigBuilder {
   public build(): void {
     this._data = defaultsDeep({}, ...this._models.reverse());
     this._rootConfig.setData(this._data);
+    this.emit('changed', this);
   }
 }

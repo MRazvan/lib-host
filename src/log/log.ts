@@ -1,5 +1,5 @@
 import { isNil } from 'lodash';
-import { IConfig, IRootConfig } from '../config/i.config';
+import { IConfig } from '../config/i.config';
 import { ILog, LevelFromString, LogLevel } from './interfaces/i.log';
 import { LogManager } from './manager';
 
@@ -7,7 +7,7 @@ export class Log implements ILog {
   private _level: LogLevel;
   private readonly _scopedConfig: IConfig;
 
-  constructor(private readonly _ctx: string, _rootConfig: IRootConfig) {
+  constructor(private readonly _ctx: string, _rootConfig: IConfig) {
     this._scopedConfig = _rootConfig.scope('log');
     this._updateFromConfig();
   }

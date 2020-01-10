@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { Container, interfaces } from 'inversify';
 import { defaultsDeep } from 'lodash';
 import { ConfigBuilder } from './config/config.builder';
@@ -11,11 +12,12 @@ import { Runnable } from './runnable/runnable';
 import { PartialModel } from './utils';
 
 export interface IModule {
-  init(container: Container, options?: any): void | Promise<void>;
+  init(container: Container, host: Host, options?: any): void | Promise<void>;
 }
 
-class ModuleData extends PartialModel<ModuleData> {
+export class ModuleData extends PartialModel<ModuleData> {
   public appModule: IModule;
+  public name: string;
   public options: any;
   public initialized = false;
 }
@@ -27,7 +29,7 @@ export class RunnableInfo extends PartialModel<RunnableInfo> {
   public lastError: any;
 }
 
-export class Host {
+export class Host extends EventEmitter {
   private readonly _modules: ModuleData[] = [];
   private _container: Container;
   private _log: ILog;
@@ -36,6 +38,7 @@ export class Host {
   private _initialized = false;
 
   constructor(containerOrOptions?: interfaces.ContainerOptions | Container) {
+    super();
     if (containerOrOptions instanceof Container) {
       this._container = containerOrOptions;
     } else {
@@ -48,6 +51,10 @@ export class Host {
     this._container.bind<Host>(Host).toConstantValue(this);
   }
 
+  public getModules(): ModuleData[] {
+    return this._modules;
+  }
+
   public getRunnables(): RunnableInfo[] {
     return this._runnables;
   }
@@ -57,7 +64,9 @@ export class Host {
   }
 
   public addModule(appModule: IModule, options?: any): Host {
-    this._modules.push(new ModuleData({ appModule: appModule, options: options }));
+    const moduleData = new ModuleData({ appModule: appModule, options: options, name: appModule.constructor.name });
+    this._modules.push(moduleData);
+    this.emit('module.added', moduleData);
     return this;
   }
 
@@ -113,6 +122,7 @@ export class Host {
     // Set a logger for us
     this._log = logFactory.createLog('Host');
     this._initialized = true;
+    this.emit('initialized', this);
     // And we are done
     return this;
   }
@@ -122,7 +132,7 @@ export class Host {
     if (this._started) {
       return;
     }
-    this.init();
+    this.init(options);
     // For a start initialize all modules
     for (let idx = 0; idx < this._modules.length; ++idx) {
       const entry: ModuleData = this._modules[idx];
@@ -131,14 +141,16 @@ export class Host {
         continue;
       }
 
-      const result = entry.appModule.init(this._container, defaultsDeep(options || {}, entry.options));
+      const result = entry.appModule.init(this._container, this, defaultsDeep(options || {}, entry.options));
       try {
         if (result instanceof Promise) {
           await result;
         }
         entry.initialized = true;
+        this.emit('module.initialied', entry.appModule);
       } catch (error) {
         this._log.error(`Error initializing module ${entry.appModule.constructor.name}.`, error);
+        this.emit('module.failed', entry.appModule);
       }
     }
 
@@ -158,6 +170,7 @@ export class Host {
         );
       });
       this._log.info(`Found ${runnables.length} runnables.`);
+      this.emit('runnables', this._runnables);
     }
 
     // Try and call 'start' and 'allStarted' on them
@@ -168,10 +181,12 @@ export class Host {
       try {
         await entry.runnable.start();
         entry.started = true;
+        this.emit('runnable.started', entry);
       } catch (error) {
         entry.started = false;
         entry.lastError = error;
         this._log.error(` -> Error starting runnable '${entry.name}'`, error);
+        this.emit('runnable.failed', entry, error);
       }
     }
 
@@ -185,22 +200,28 @@ export class Host {
       this._log.debug(` -> All Started '${entry.name}'.`);
       try {
         await entry.runnable.allStarted();
+        this.emit('runnable.allStarted', entry);
       } catch (error) {
         // Something happend when calling all started, we need to 'stop' this runnable since start was already called
         entry.lastError = error;
         runnablesToStop.push(entry);
         this._log.error(` -> Error calling allStarted on runnable '${entry.name}'`, error);
+        this.emit('runnable.failed', entry, error);
       }
     }
     this._started = true;
-    return this._stop(runnablesToStop);
+    const stopFailed = this._stop(runnablesToStop);
+    this.emit('started', this);
+    return stopFailed;
   }
 
   public stop(): Promise<void> {
-    return this._stop(this._runnables).then(() => {
+    const stopped = this._stop(this._runnables).then(() => {
       this._container = null;
       this._started = false;
     });
+    this.emit('stop');
+    return stopped;
   }
 
   private async _stop(runnablesToStop: RunnableInfo[]): Promise<void> {
@@ -214,9 +235,11 @@ export class Host {
       this._log.debug(` -> Stopping runnable '${entry.name}'.`);
       try {
         await entry.runnable.stop();
+        this.emit('runnable.stop', entry);
       } catch (error) {
         entry.lastError = error;
         this._log.error(` -> Error stoping runnable '${entry.constructor.name}'`, error);
+        this.emit('runnable.failed', entry, error);
       }
     }
 
@@ -231,9 +254,11 @@ export class Host {
       try {
         await entry.runnable.allStopped();
         entry.started = false;
+        this.emit('runnable.allStopped', entry);
       } catch (error) {
         entry.lastError = error;
         this._log.error(` -> Error calling allStopped on runnable '${entry.constructor.name}'`, error);
+        this.emit('runnable.failed', entry, error);
       }
     }
   }

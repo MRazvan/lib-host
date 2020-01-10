@@ -63,7 +63,7 @@
   "dependencies": {
     "debug": "^4.1.1",
     "inversify": "^5.0.1",
-    "logstash": "^3.0.0",
+    "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "reflect-metadata": "^0.1.13"
   },

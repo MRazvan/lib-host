@@ -15,6 +15,15 @@ export class Logger extends PartialModel<Logger> {
 export class LogManager {
   private static readonly _loggers: Logger[] = [];
 
+  public static replaceLogger(name: string, logger: ILogImplementation): void {
+    const existingLogger = LogManager._loggers.find((lg: Logger) => lg.name === name);
+    if (isNil(existingLogger)) {
+      LogManager._loggers.push(new Logger({ name, logger }));
+    } else {
+      existingLogger.logger = logger;
+    }
+  }
+
   public static addLogger(name: string, logger: ILogImplementation): void {
     const existingLogger = LogManager._loggers.find((lg: Logger) => lg.name === name);
     if (isNil(existingLogger)) {

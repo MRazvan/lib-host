@@ -9,11 +9,16 @@ import { ILogImplementation, LogEntry } from '../interfaces/i.log.implementation
 @injectable()
 export class ConsoleLog implements ILogImplementation {
   private readonly _scopedConfig: IConfig;
-  private readonly _enabled: boolean = true;
+  private _enabled = true;
   constructor(_rootConfig: RootConfig) {
     this._scopedConfig = _rootConfig.scope('log.loggers.console');
     // Set the initial state
     this._enabled = this._scopedConfig.get<boolean>('enabled', true);
+    // Follow config change, it's safe to attach to the even since this logger
+    //    will exist during the lifetime of the application
+    _rootConfig.on('changed', () => {
+      this._enabled = this._scopedConfig.get<boolean>('enabled', true);
+    });
   }
 
   public log(entry: LogEntry): void {
@@ -46,17 +51,18 @@ export class ConsoleLog implements ILogImplementation {
       default:
         break;
     }
+    const strLevel = (LevelToString[entry.level] + ''.padEnd(7)).substr(0, 7);
     if (!isNil(dataMessage) && !isEmpty(dataMessage)) {
       console.log(
-        `${color}[${moment(entry.time).format('YYYY-MM-DD HH:mm:ss.SSS')}][${LevelToString[entry.level]}] ${
-          entry.ctx
-        } - ${entry.message} ${dataMessage}${resetColor}`
+        `${color}[${moment(entry.time).format('YYYY-MM-DD HH:mm:ss.SSS')}][${strLevel}] ${entry.ctx} - ${
+          entry.message
+        } ${dataMessage}${resetColor}`
       );
     } else {
       console.log(
-        `${color}[${moment(entry.time).format('YYYY-MM-DD HH:mm:ss.SSS')}][${LevelToString[entry.level]}] ${
-          entry.ctx
-        } - ${entry.message}${resetColor}`
+        `${color}[${moment(entry.time).format('YYYY-MM-DD HH:mm:ss.SSS')}][${strLevel}] ${entry.ctx} - ${
+          entry.message
+        }${resetColor}`
       );
     }
   }
