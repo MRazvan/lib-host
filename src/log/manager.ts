@@ -1,7 +1,7 @@
 import { debug } from 'debug';
 import { isNil } from 'lodash';
 import * as moment from 'moment';
-import { PartialModel } from '../utils';
+import { getErrorMessage, PartialModel } from '../utils';
 import { LogLevel } from './interfaces/i.log';
 import { ILogImplementation, LogEntry } from './interfaces/i.log.implementation';
 
@@ -46,7 +46,7 @@ export class LogManager {
       try {
         le.logger.log(logEntry);
       } catch (error) {
-        logDebug(`Error calling log ${le.name} with payload ${JSON.stringify(logEntry)}. `);
+        logDebug(`Error calling log ${le.name} with payload ${JSON.stringify(logEntry)}. ${getErrorMessage(error)}`);
       }
     });
   }

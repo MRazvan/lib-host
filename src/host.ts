@@ -211,7 +211,7 @@ export class Host extends EventEmitter {
     }
     this._started = true;
     const stopFailed = this._stop(runnablesToStop);
-    this.emit('started', this);
+    this.emit('start', this);
     return stopFailed;
   }
 
