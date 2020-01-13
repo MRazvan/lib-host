@@ -5,6 +5,11 @@ It provides two services for all functionalities.
 1. [Configuration service](#configuration)
 2. [Logging service](#logging)
 
+# Installation
+```
+npm i lib-host
+```
+# Usage
 ```typescript
 class MyModule {
   public init(hostContainer: Container, host: Host, options? : Record<string, any>): void {
@@ -27,6 +32,7 @@ host.addModule(new MyModule());
 // Output
 //  [time][Info   ] MyModule - Init called. Over 3000
 ```
+# Functionalities
 
 ## Host
 The hosting class, this exposes methods to register different functionality providing modules. It extends EventEmitter and raises several events.
