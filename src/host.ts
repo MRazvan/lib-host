@@ -136,6 +136,10 @@ export class Host extends EventEmitter {
       return;
     }
     this.init(options);
+
+    const configBuilder = this._container.get<ConfigBuilder>(ConfigBuilder);
+    // Set the options in the cofiguration and add the log defaults if we don't set anything else in the options
+    configBuilder.addJson(options).build();
     // For a start initialize all modules
     for (let idx = 0; idx < this._modules.length; ++idx) {
       const entry: ModuleData = this._modules[idx];
