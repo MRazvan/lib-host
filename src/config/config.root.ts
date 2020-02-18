@@ -45,4 +45,48 @@ export class RootConfig extends EventEmitter implements IConfig {
   public value<T>(): T {
     return this.get<T>('');
   }
+
+  public getNumber(path: string, defaultValue?: number): number {
+    const val = this.get<unknown>(path, defaultValue);
+    if (isNil(val)) {
+      return defaultValue;
+    }
+
+    if (typeof val === 'number') {
+      return val;
+    }
+    const number = parseFloat(val + '');
+    if (isNaN(number)) {
+      return defaultValue;
+    }
+    return number;
+  }
+
+  public getString(path: string, defaultValue?: string): string {
+    const val = this.get<unknown>(path, defaultValue);
+    if (isNil(val)) {
+      return defaultValue;
+    }
+    return '' + val;
+  }
+
+  public getBool(path: string, defaultValue?: boolean): boolean {
+    const val = this.get<unknown>(path, defaultValue);
+    if (isNil(val)) {
+      return defaultValue;
+    }
+    const str = val.toString();
+    switch (str.toLowerCase().trim()) {
+      case 'true':
+      case 'yes':
+      case '1':
+        return true;
+      case 'false':
+      case 'no':
+      case '0':
+        return false;
+      default:
+        return Boolean(str);
+    }
+  }
 }
