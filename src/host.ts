@@ -271,7 +271,7 @@ export class Host extends EventEmitter {
   }
 
   public static build(appModule: ModuleCallback, options?: any): Host {
-    return new Host().init().addModule(
+    return new Host().addModule(
       {
         init: appModule
       },
