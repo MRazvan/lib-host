@@ -11,6 +11,8 @@ import { LogManager } from './log/manager';
 import { Runnable } from './runnable/runnable';
 import { PartialModel } from './utils';
 
+export type ModuleCallback = (container: Container, host: Host, options?: any) => void | Promise<void>;
+
 export interface IModule {
   init(container: Container, host: Host, options?: any): void | Promise<void>;
 }
@@ -36,6 +38,7 @@ export class Host extends EventEmitter {
   private readonly _runnables: RunnableInfo[] = [];
   private _started = false;
   private _initialized = false;
+  public config: RootConfig = null;
 
   constructor(containerOrOptions?: interfaces.ContainerOptions | Container) {
     super();
@@ -110,14 +113,14 @@ export class Host extends EventEmitter {
       .build();
 
     // Initialize the logger
-    const rootConfig = this._container.get<RootConfig>(RootConfig);
-    const disableDefault = rootConfig.get<boolean>('log.disable_default', false);
+    this.config = this._container.get<RootConfig>(RootConfig);
+    const disableDefault = this.config.get<boolean>('log.disable_default', false);
     if (!disableDefault) {
-      LogManager.addLogger('console', new ConsoleLog(rootConfig));
+      LogManager.addLogger('console', new ConsoleLog(this.config));
     }
     // Now set a logger for the configuration provider
     const logFactory = this._container.get<LogFactory>(LogFactory);
-    rootConfig.setLogger(logFactory.createLog('Config'));
+    this.config.setLogger(logFactory.createLog('Config'));
 
     // Set a logger for us
     this._log = logFactory.createLog('Host');
@@ -261,5 +264,14 @@ export class Host extends EventEmitter {
         this.emit('runnable.failed', entry, error);
       }
     }
+  }
+
+  public static build(appModule: ModuleCallback, options?: any): Host {
+    return new Host().init().addModule(
+      {
+        init: appModule
+      },
+      options
+    );
   }
 }
